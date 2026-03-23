@@ -44,14 +44,14 @@ def add_song():
 
     playlist = _load_playlist()
 
-    new_song = {k: str(song[k]).strip() for k in EXPECTED_KEYS}
+    new_song = {k: song[k] for k in EXPECTED_KEYS}
     new_song["likes"] = 0
-    playlist.append(new_song)
+    playlist["songs"].append(new_song)
     _save_playlist(playlist)
     return jsonify(new_song), 201
 
 
-@app.route("/songs", methods=["PUT"])
+@app.route("/songs/like", methods=["PUT"])
 def like_song():
     name = request.args.get("name", False) # 'Name' vem como parametro do request.
     if not name:
@@ -60,11 +60,30 @@ def like_song():
     playlist = _load_playlist()
     for song in playlist["songs"]:
         if song["name"] == name:
-            song["like"] += 1
+            song["likes"] += 1
             _save_playlist(playlist)
             return jsonify(song), 200
 
     return jsonify({"error": "Música não encontrada"}), 404
+
+
+@app.route("/songs/restart", methods=["DELETE"])
+def restart_playlist():
+    floor = request.args.get("floor", "all")
+    playlist = _load_playlist()
+    if floor == "all":
+        playlist["songs"] = []
+        _save_playlist(playlist)
+        return jsonify(playlist), 200
+    else:
+        songs_to_delete = []
+        for index, song in enumerate(playlist["songs"]):
+            if song["floor"] == int(floor):
+                songs_to_delete.append(index)
+        songs_to_delete = set(songs_to_delete)
+        playlist["songs"] = [value for index, value in enumerate(playlist["songs"]) if index not in songs_to_delete]
+        _save_playlist(playlist)
+        return jsonify(playlist), 200
 
 
 if __name__ == "__main__":
